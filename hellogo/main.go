@@ -1,7 +1,11 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/roshinys/httpGo/mystrings"
+)
 
 func main() {
-	fmt.Println("Hello world")
+	fmt.Println(mystrings.Reverse("dlrow olleh"))
 }
