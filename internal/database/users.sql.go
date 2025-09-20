@@ -11,14 +11,14 @@ import (
 
 const createUser = `-- name: CreateUser :one
 
-INSERT INTO users (id,created_at,updated_at,email)
+INSERT INTO users (id,createdAt,updatedAt,email)
 VALUES (
     gen_random_uuid(),
     NOW(),
     NOW(),
     $1
 )
-RETURNING id, created_at, updated_at, email
+RETURNING id, createdat, updatedat, email
 `
 
 func (q *Queries) CreateUser(ctx context.Context, email string) (User, error) {
@@ -26,15 +26,15 @@ func (q *Queries) CreateUser(ctx context.Context, email string) (User, error) {
 	var i User
 	err := row.Scan(
 		&i.ID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
+		&i.Createdat,
+		&i.Updatedat,
 		&i.Email,
 	)
 	return i, err
 }
 
 const fetchUserByEmail = `-- name: FetchUserByEmail :one
-SELECT id, created_at, updated_at, email FROM users where email = $1
+SELECT id, createdat, updatedat, email FROM users where email = $1
 `
 
 func (q *Queries) FetchUserByEmail(ctx context.Context, email string) (User, error) {
@@ -42,8 +42,8 @@ func (q *Queries) FetchUserByEmail(ctx context.Context, email string) (User, err
 	var i User
 	err := row.Scan(
 		&i.ID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
+		&i.Createdat,
+		&i.Updatedat,
 		&i.Email,
 	)
 	return i, err

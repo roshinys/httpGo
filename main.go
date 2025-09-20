@@ -43,10 +43,13 @@ func main() {
 	mux.Handle("POST /api/health", cfg.MiddlewareMetricsInc(handlers.HealthHandler()))
 	mux.Handle("GET /api/metrics", handlers.MetricsHandler(cfg))
 	mux.Handle("POST /api/reset", cfg.MiddlewareMetricsInc(handlers.ResetHandler(cfg)))
-	mux.Handle("POST /api/validate-chirp", cfg.MiddlewareMetricsInc(handlers.ChirpyHandler()))
 
 	// User Routes
 	mux.Handle("POST /api/users", cfg.MiddlewareMetricsInc(handlers.UserHandler(cfg)))
+
+	// Chirp Routes
+	mux.Handle("POST /api/chirps", cfg.MiddlewareMetricsInc(handlers.ChirpyHandler(cfg)))
+	mux.Handle("GET /api/chirps", cfg.MiddlewareMetricsInc(handlers.FetchChirpHandler(cfg)))
 
 	server := &http.Server{
 		Addr:           ":" + port,

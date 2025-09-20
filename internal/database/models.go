@@ -10,9 +10,17 @@ import (
 	"github.com/google/uuid"
 )
 
+type Chirpy struct {
+	ID        uuid.UUID
+	Createdat time.Time
+	Updatedat time.Time
+	Body      string
+	Userid    uuid.UUID
+}
+
 type User struct {
 	ID        uuid.UUID
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	Createdat time.Time
+	Updatedat time.Time
 	Email     string
 }
