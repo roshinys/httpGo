@@ -3,10 +3,13 @@ package config
 import (
 	"net/http"
 	"sync/atomic"
+
+	"github.com/roshinys/httpGo/internal/database"
 )
 
 type ApiConfig struct {
 	fileserverHits atomic.Int32 // safe increments
+	DB             *database.Queries
 }
 
 func (a *ApiConfig) Hit() {

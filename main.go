@@ -1,16 +1,41 @@
 package main
 
 import (
+	"database/sql"
+	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
+	"github.com/joho/godotenv"
 	"github.com/roshinys/httpGo/internal/config"
+	"github.com/roshinys/httpGo/internal/database"
 	"github.com/roshinys/httpGo/internal/handlers"
+
+	_ "github.com/lib/pq"
 )
 
 func main() {
-	cfg := &config.ApiConfig{}
+
+	godotenv.Load()
+
+	dbURL := os.Getenv("DB_URL")
+	port := os.Getenv("PORT")
+	fmt.Printf(" DB URL is %s", dbURL)
+	fmt.Println()
+
+	db, err := sql.Open("postgres", dbURL)
+	if err != nil {
+		log.Fatal(" Failed to Connect to db url ")
+		return
+	}
+	defer db.Close()
+	fmt.Println(db)
+	dbQueries := database.New(db)
+	cfg := &config.ApiConfig{
+		DB: dbQueries,
+	}
 	mux := http.NewServeMux()
 
 	mux.Handle("/app", http.FileServer(http.Dir("./")))
@@ -20,14 +45,17 @@ func main() {
 	mux.Handle("POST /api/reset", cfg.MiddlewareMetricsInc(handlers.ResetHandler(cfg)))
 	mux.Handle("POST /api/validate-chirp", cfg.MiddlewareMetricsInc(handlers.ChirpyHandler()))
 
+	// User Routes
+	mux.Handle("POST /api/users", cfg.MiddlewareMetricsInc(handlers.UserHandler(cfg)))
+
 	server := &http.Server{
-		Addr:           ":8080",
+		Addr:           ":" + port,
 		Handler:        mux,
 		ReadTimeout:    10 * time.Second,
 		WriteTimeout:   10 * time.Second,
 		MaxHeaderBytes: 1 << 20,
 	}
-	log.Println("Server starting on http://localhost:8080")
-	log.Println("Visit http://localhost:8080 to see the 404 (no handlers registered yet)")
+	log.Println("Server starting on http://localhost:" + port)
+	log.Printf("Visit http://localhost:%s to see the 404 (no handlers registered yet)", port)
 	log.Fatal(server.ListenAndServe())
 }
