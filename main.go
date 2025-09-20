@@ -18,6 +18,7 @@ func main() {
 	mux.Handle("POST /api/health", cfg.MiddlewareMetricsInc(handlers.HealthHandler()))
 	mux.Handle("GET /api/metrics", handlers.MetricsHandler(cfg))
 	mux.Handle("POST /api/reset", cfg.MiddlewareMetricsInc(handlers.ResetHandler(cfg)))
+	mux.Handle("POST /api/validate-chirp", cfg.MiddlewareMetricsInc(handlers.ChirpyHandler()))
 
 	server := &http.Server{
 		Addr:           ":8080",
