@@ -7,34 +7,45 @@ package database
 
 import (
 	"context"
+	"database/sql"
+	"time"
+
+	"github.com/google/uuid"
 )
 
 const createUser = `-- name: CreateUser :one
 
-INSERT INTO users (id,createdAt,updatedAt,email)
+INSERT INTO users (id,createdAt,updatedAt,email,password)
 VALUES (
     gen_random_uuid(),
     NOW(),
     NOW(),
-    $1
+    $1,
+    $2
 )
-RETURNING id, createdat, updatedat, email
+RETURNING id, createdat, updatedat, email, password
 `
 
-func (q *Queries) CreateUser(ctx context.Context, email string) (User, error) {
-	row := q.db.QueryRowContext(ctx, createUser, email)
+type CreateUserParams struct {
+	Email    string
+	Password sql.NullString
+}
+
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, createUser, arg.Email, arg.Password)
 	var i User
 	err := row.Scan(
 		&i.ID,
 		&i.Createdat,
 		&i.Updatedat,
 		&i.Email,
+		&i.Password,
 	)
 	return i, err
 }
 
 const fetchUserByEmail = `-- name: FetchUserByEmail :one
-SELECT id, createdat, updatedat, email FROM users where email = $1
+SELECT id, createdat, updatedat, email, password FROM users where email = $1
 `
 
 func (q *Queries) FetchUserByEmail(ctx context.Context, email string) (User, error) {
@@ -45,6 +56,30 @@ func (q *Queries) FetchUserByEmail(ctx context.Context, email string) (User, err
 		&i.Createdat,
 		&i.Updatedat,
 		&i.Email,
+		&i.Password,
+	)
+	return i, err
+}
+
+const fetchUserWithoutPassword = `-- name: FetchUserWithoutPassword :one
+SELECT id,email,createdAt,updatedAt FROM users where email = $1
+`
+
+type FetchUserWithoutPasswordRow struct {
+	ID        uuid.UUID
+	Email     string
+	Createdat time.Time
+	Updatedat time.Time
+}
+
+func (q *Queries) FetchUserWithoutPassword(ctx context.Context, email string) (FetchUserWithoutPasswordRow, error) {
+	row := q.db.QueryRowContext(ctx, fetchUserWithoutPassword, email)
+	var i FetchUserWithoutPasswordRow
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.Createdat,
+		&i.Updatedat,
 	)
 	return i, err
 }

@@ -44,6 +44,9 @@ func main() {
 	mux.Handle("GET /api/metrics", handlers.MetricsHandler(cfg))
 	mux.Handle("POST /api/reset", cfg.MiddlewareMetricsInc(handlers.ResetHandler(cfg)))
 
+	// Auth Routes
+	mux.Handle("POST /api/login", cfg.MiddlewareMetricsInc(handlers.AuthLogin(cfg)))
+
 	// User Routes
 	mux.Handle("POST /api/users", cfg.MiddlewareMetricsInc(handlers.UserHandler(cfg)))
 

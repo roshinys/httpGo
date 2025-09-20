@@ -1,5 +1,6 @@
 package models
 
 type UserDto struct {
-	Email string `json:"email"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
