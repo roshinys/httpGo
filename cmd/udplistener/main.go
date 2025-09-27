@@ -15,6 +15,9 @@ func main() {
 		return
 	}
 	conn, err := net.DialUDP("udp", nil, udpAdr)
+	if err != nil {
+		log.Fatal(err)
+	}
 	defer conn.Close()
 	fmt.Println("udp setup connection established")
 

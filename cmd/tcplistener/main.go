@@ -5,6 +5,8 @@ import (
 	"io"
 	"log"
 	"net"
+
+	"github.com/roshinys/httpGo/internal/request"
 )
 
 func getLinesChannel(f io.ReadCloser) <-chan string {
@@ -56,10 +58,16 @@ func main() {
 			log.Fatal(err)
 		}
 		fmt.Println("Accepted connection from", conn.RemoteAddr())
-		ch := getLinesChannel(conn)
-		for line := range ch {
-			fmt.Printf("read %s\n", line)
+		req, err := request.RequestFromReader(conn)
+		if err != nil {
+			log.Fatal(err)
 		}
+		fmt.Println(*req)
+
+		// ch := getLinesChannel(conn)
+		// for line := range ch {
+		// 	fmt.Printf("read %s\n", line)
+		// }
 		fmt.Println("Connection closed")
 	}
 
