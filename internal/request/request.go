@@ -3,6 +3,7 @@ package request
 import (
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 
 	"github.com/roshinys/httpGo/internal/headers"
@@ -13,12 +14,14 @@ type ParserState int
 const (
 	ParserInitialized ParserState = iota
 	ParserParsingHeaders
+	ParserParsingBody
 	ParserDone
 )
 
 type Request struct {
 	RequestLine RequestLine
 	Headers     headers.Headers
+	Body        []byte
 	State       ParserState
 }
 
@@ -81,14 +84,59 @@ func (r *Request) parse(data []byte) (int, error) {
 			if err != nil {
 				return n, err // Return only request line bytes if header parsing fails
 			}
+			if r.State == ParserParsingBody {
+				bodyN, err := r.parseBody(data[n+headerN:])
+				if err != nil {
+					return n + headerN, nil
+				}
+				return n + headerN + bodyN, nil
+			}
 			return n + headerN, nil // Return total bytes consumed
 		}
 		return n, nil
 	case ParserParsingHeaders:
-		return r.parseHeaderLine(data)
+		n, err := r.parseHeaderLine(data)
+		if err != nil {
+			return n, err
+		}
+		if r.State == ParserParsingBody {
+			bodyN, err := r.parseBody(data[n:])
+			if err != nil {
+				return n, nil
+			}
+			return n + bodyN, nil
+		}
+		return n, err
+	case ParserParsingBody:
+		return r.parseBody(data)
 	default:
 		return 0, nil
 	}
+}
+
+func (r *Request) parseBody(data []byte) (int, error) {
+	clStr, ok := r.Headers["content-length"]
+	if !ok {
+		return 0, fmt.Errorf("missing Content-Length header")
+	}
+	cl, err := strconv.Atoi(clStr)
+	if err != nil {
+		return 0, fmt.Errorf("invalid Content-Length: %s", clStr)
+	}
+	remaining := cl - len(r.Body)
+	if remaining <= 0 {
+		return 0, fmt.Errorf("body already complete")
+	}
+	toCopy := len(data)
+	if toCopy > remaining {
+		return 0, fmt.Errorf("body exceeds Content-Length: expected %d, got %d", cl, len(r.Body)+toCopy)
+	}
+
+	r.Body = append(r.Body, data[:toCopy]...)
+	if len(r.Body) == cl {
+		r.State = ParserDone
+	}
+	return cl, nil
 }
 
 func (r *Request) parseHeaderLine(data []byte) (int, error) {
@@ -105,10 +153,14 @@ func (r *Request) parseHeaderLine(data []byte) (int, error) {
 		}
 		totalConsumed += n
 		if done {
-			// Headers parsing complete (found empty line)
-			r.State = ParserDone
+			if _, ok := r.Headers["content-length"]; ok {
+				r.State = ParserParsingBody
+			} else {
+				r.State = ParserDone
+			}
 			break
 		}
+
 	}
 	return totalConsumed, nil
 }
