@@ -27,7 +27,11 @@ func main() {
 			log.Fatal(err)
 		}
 		reqLine := req.RequestLine
-		fmt.Printf("Request Line : Version : %s , Method : %s , Target : %s", reqLine.HttpVersion, reqLine.Method, reqLine.RequestTarget)
+		fmt.Printf("Request Line : Version : %s , Method : %s , Target : %s \n", reqLine.HttpVersion, reqLine.Method, reqLine.RequestTarget)
+		fmt.Println("Headers:")
+		for k, v := range req.Headers {
+			fmt.Println("Key:", k, "Value:", v)
+		}
 		fmt.Println("Connection closed")
 	}
 
