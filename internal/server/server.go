@@ -1,13 +1,16 @@
 package server
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"strconv"
 	"sync/atomic"
 
 	"github.com/roshinys/httpGo/internal/request"
+	"github.com/roshinys/httpGo/internal/response"
 )
 
 type Server struct {
@@ -16,7 +19,16 @@ type Server struct {
 	closed   atomic.Bool
 }
 
-func Serve(port int) (*Server, error) {
+type Handler func(w io.Writer, req *request.Request) *response.HandlerError
+
+func NewHandlerError(statusCode response.StatusCode, message string) *response.HandlerError {
+	return &response.HandlerError{
+		StatusCode: statusCode,
+		Message:    message,
+	}
+}
+
+func Serve(port int, handler Handler) (*Server, error) {
 	listener, err := net.Listen("tcp", ":"+strconv.Itoa(port))
 	if err != nil {
 		log.Fatal(err)
@@ -26,7 +38,7 @@ func Serve(port int) (*Server, error) {
 		listener: listener,
 		port:     port,
 	}
-	go s.listen()
+	go s.listen(handler)
 	return s, err
 }
 
@@ -37,7 +49,7 @@ func (s *Server) Close() error {
 	return nil
 }
 
-func (s *Server) listen() {
+func (s *Server) listen(handler Handler) {
 	for {
 		conn, err := s.listener.Accept()
 		if err != nil {
@@ -48,11 +60,11 @@ func (s *Server) listen() {
 			log.Printf("Accept error: %v", err)
 			continue
 		}
-		go s.handle(conn)
+		go s.handle(conn, handler)
 	}
 }
 
-func (s *Server) handle(conn net.Conn) {
+func (s *Server) handle(conn net.Conn, handler Handler) {
 	fmt.Println("Accepted connection from", conn.RemoteAddr())
 	req, err := request.RequestFromReader(conn)
 	if err != nil {
@@ -67,14 +79,19 @@ func (s *Server) handle(conn net.Conn) {
 	}
 	fmt.Printf("Body : %s \n", string(req.Body))
 
-	// Write a basic HTTP response
-	response := "HTTP/1.1 200 OK\r\n" +
-		"Content-Type: text/plain\r\n" +
-		"Content-Length: 12\r\n" +
-		"\r\n" +
-		"Hello World!"
+	buf := &bytes.Buffer{}
+	responseWriter := response.NewWrite(conn)
 
-	conn.Write([]byte(response))
+	if handlerErr := handler(buf, req); handlerErr != nil {
+		responseWriter.WriteHandlerError(*handlerErr)
+		return
+	}
+
+	body := buf.Bytes()
+	headers := response.GetDefaultHeaders(len(body))
+	responseWriter.WriteStatusLine(response.StatusOk)
+	responseWriter.WriteHeaders(headers)
+	responseWriter.WriteBody(body)
 
 	fmt.Println("Connection closed")
 }

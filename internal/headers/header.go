@@ -8,6 +8,19 @@ import (
 
 type Headers map[string]string
 
+func NewHeader() Headers {
+	h := Headers{}
+	return h
+}
+
+func (h *Headers) SetHeaders(key, value string) {
+	if v, ok := (*h)[key]; ok {
+		(*h)[key] = fmt.Sprintf("%s,%s", v, value)
+	} else {
+		(*h)[key] = value
+	}
+}
+
 func (h *Headers) Parse(data []byte) (n int, done bool, err error) {
 	headerStr := string(data)
 	crlfIndex := strings.Index(headerStr, "\r\n")
@@ -32,16 +45,12 @@ func (h *Headers) Parse(data []byte) (n int, done bool, err error) {
 		return 0, false, fmt.Errorf("invalid header format: empty key")
 	}
 	if *h == nil {
-		*h = make(map[string]string)
+		*h = NewHeader()
 	}
 	if !validateHeaderKey(key) {
 		return 0, false, fmt.Errorf("invalid header key")
 	}
-	if v, ok := (*h)[key]; ok {
-		(*h)[key] = fmt.Sprintf("%s,%s", v, value)
-	} else {
-		(*h)[key] = value
-	}
+	h.SetHeaders(key, value)
 	return crlfIndex + 2, false, nil
 }
 
